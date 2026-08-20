@@ -8,7 +8,7 @@ runs on ubuntu-latest) is the actual pass/fail signal for this file.
 """
 from __future__ import annotations
 
-from unittest.mock import AsyncMock, patch
+from unittest.mock import AsyncMock, Mock, patch
 
 import pytest
 from homeassistant import config_entries
@@ -49,6 +49,32 @@ def mock_get_device_info():
         AsyncMock(return_value=FAKE_DEVICE),
     ) as mocked:
         yield mocked
+
+
+@pytest.fixture(autouse=True)
+def mock_clientsession():
+    """Never construct a real aiohttp ClientSession in these tests.
+
+    `_async_probe` in config_flow.py calls the real
+    `async_get_clientsession(hass)` before handing the session to `YncClient`
+    -- even with `get_device_info` mocked, building that real session lazily
+    initializes aiohttp's pycares-based DNS resolver, which spawns a
+    background thread the harness's teardown-time thread-leak check has no
+    opt-out for (unlike its lingering-task/-timer checks). Mocking the
+    session constructor itself, the way HA's own test suite does, avoids
+    ever touching that machinery.
+    """
+    with (
+        patch(
+            "custom_components.yamaha_ync.config_flow.async_get_clientsession",
+            return_value=Mock(),
+        ),
+        patch(
+            "custom_components.yamaha_ync.async_get_clientsession",
+            return_value=Mock(),
+        ),
+    ):
+        yield
 
 
 @pytest.fixture
