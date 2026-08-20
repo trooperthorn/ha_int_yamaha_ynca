@@ -8,5 +8,8 @@ ruff
 # config_flow, platform files) -- the protocol/model layer in tests/ works
 # without these. async-upnp-client is a runtime dependency of HA's ssdp
 # component, needed for the SsdpServiceInfo import fallback path.
+# pytest-homeassistant-custom-component provides the `hass` fixture used by
+# tests/test_ha_integration.py.
 homeassistant
 async-upnp-client
+pytest-homeassistant-custom-component
