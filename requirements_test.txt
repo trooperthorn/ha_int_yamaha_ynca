@@ -1,0 +1,12 @@
+pytest
+pytest-asyncio
+aiohttp
+pyyaml
+ruff
+
+# Only needed to exercise the homeassistant.* modules (coordinator, entity,
+# config_flow, platform files) -- the protocol/model layer in tests/ works
+# without these. async-upnp-client is a runtime dependency of HA's ssdp
+# component, needed for the SsdpServiceInfo import fallback path.
+homeassistant
+async-upnp-client
