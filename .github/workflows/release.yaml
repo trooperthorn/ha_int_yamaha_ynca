@@ -18,15 +18,18 @@ jobs:
       - run: |
           echo Checkout done for $GITHUB_REF
 
-      - name: Figure out integration name
+      - name: Zip every custom_components/* dir
+        # This repo now hosts more than one integration (yamaha_ynca,
+        # yamaha_ync). Building a zip per subdirectory -- rather than
+        # assuming there's exactly one -- keeps yamaha_ynca's asset name
+        # (yamaha_ynca.zip, what hacs.json's zip_release config expects)
+        # stable regardless of how many integrations end up living here.
         run: |
-          INTEGRATION_SUBDIR=$(ls -d custom_components/*/)
-          echo "INTEGRATION_NAME=$(echo $INTEGRATION_SUBDIR | cut -d'/' -f2)" >> $GITHUB_ENV
-          echo Integration name: ${{ env.INTEGRATION_NAME }}
-
-      - name: Zip custom components dir
-        working-directory: "custom_components/${{ env.INTEGRATION_NAME }}"
-        run: zip -r ${{ env.INTEGRATION_NAME }}.zip ./*
+          for dir in custom_components/*/; do
+            name=$(basename "$dir")
+            (cd "$dir" && zip -r "../../${name}.zip" ./*)
+            echo "Built ${name}.zip"
+          done
 
       - name: Create Release
         # Started from: https://stackoverflow.com/questions/75679683/how-can-i-auto-generate-a-release-note-and-create-a-release-using-github-actions
@@ -35,7 +38,7 @@ jobs:
           tag: ${{ github.ref_name }}
         # --discussion-category "General" not possible for draft releases :/
         run: |
-          gh release create "$tag" "./custom_components/${{ env.INTEGRATION_NAME }}/${{ env.INTEGRATION_NAME }}.zip" \
+          gh release create "$tag" ./*.zip \
               --repo="$GITHUB_REPOSITORY" \
               --title="$tag" \
               --generate-notes \
