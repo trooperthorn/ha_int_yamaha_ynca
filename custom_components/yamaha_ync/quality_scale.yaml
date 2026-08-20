@@ -50,11 +50,12 @@ rules:
   test-coverage:
     status: todo
     comment: >
-      Protocol/model/client/notify layer (runs anywhere), plus config-flow
-      and setup/unload (tests/test_ha_integration.py, CI/Linux-only -- see
-      README) are covered. Platform entity behavior (media_player, number,
-      select, switch) and coordinator push/backstop-poll branching aren't
-      covered yet.
+      Protocol/model/client/notify layer, plus config-flow and setup/unload
+      (tests/test_ha_integration.py), are covered -- 26 tests, all green in
+      CI (.github/workflows/test.yml; the HA-fixture-dependent half only
+      runs on Linux, see README). Platform entity behavior (media_player,
+      number, select, switch) and coordinator push/backstop-poll branching
+      aren't covered yet, so still below the >95% bar this rule wants.
 
   # Gold
   devices: done

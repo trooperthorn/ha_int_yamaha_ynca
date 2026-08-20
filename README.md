@@ -72,14 +72,19 @@ pytest tests/test_xml_protocol.py tests/test_models.py tests/test_client.py test
 ```
 
 `tests/test_ha_integration.py` covers config-flow (user/error/duplicate/
-reconfigure) and setup/unload against a real `hass` fixture, but **can't run
-locally on native Windows** -- `pytest-homeassistant-custom-component`'s
+reconfigure) and setup/unload against a real `hass` fixture -- 5 more
+tests, **26 total**, all green on `.github/workflows/test.yml` (`ubuntu-latest`).
+It can't run locally on native Windows: `pytest-homeassistant-custom-component`'s
 event loop policy needs a real loopback socket to even construct itself,
 which collides with `pytest-socket`'s default network block (a
 well-documented Windows/asyncio ProactorEventLoop quirk, not something
-specific to this integration). `.github/workflows/test.yml` runs the full
-suite on `ubuntu-latest`, where this doesn't come up -- that's the real
-pass/fail signal for that file until verified there.
+specific to this integration). CI is what actually verified this file --
+and it earned its keep: it caught a real reconfigure-flow bug (comparing a
+still-unset unique_id) along with four CI/test-plumbing issues (pip cache
+path, a missing test dependency, faked-setup teardown crashing on unset
+`runtime_data`, and a `pycares` DNS-resolver thread lazily spun up by a real
+`aiohttp.ClientSession` the harness's thread-leak check has no opt-out
+for) before landing green.
 
 **Still open:**
 
