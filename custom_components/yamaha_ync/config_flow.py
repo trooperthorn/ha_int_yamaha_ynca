@@ -112,10 +112,13 @@ class YamahaYncConfigFlow(ConfigFlow, domain=DOMAIN):
                 errors["base"] = "cannot_connect"
             else:
                 system_id, _model_name = probed
+                # Set this flow's unique_id from what the new host actually
+                # reports *before* comparing -- otherwise the mismatch check
+                # is comparing against nothing and aborts every time.
+                await self.async_set_unique_id(system_id)
                 # Refuse to silently repoint this config entry at a
                 # different physical receiver.
                 self._abort_if_unique_id_mismatch()
-                await self.async_set_unique_id(system_id)
                 return self.async_update_reload_and_abort(
                     self._get_reconfigure_entry(), data={CONF_HOST: host}
                 )
