@@ -1,0 +1,90 @@
+blueprint:
+  name: Boost Yamaha Dialogue Level on Severe Weather Alert
+  description: >
+    When a weather integration reports a severe alert while a Yamaha zone is
+    playing, temporarily raise Dialogue Level (and, optionally, Dialogue
+    Lift) so a broadcast interruption or alert stays intelligible. Restores
+    the prior value once the alert clears.
+  domain: automation
+  source_url: https://github.com/trooperthorn/ha_int_yamaha_ynca
+  input:
+    weather_alert_entity:
+      name: Severe weather alert entity
+      description: A binary_sensor or sensor that is "on"/non-idle during a severe alert.
+      selector:
+        entity:
+          domain: [binary_sensor, sensor]
+    yamaha_zone_player:
+      name: Yamaha zone media_player
+      selector:
+        entity:
+          domain: media_player
+    dialogue_level_entity:
+      name: Dialogue level number entity
+      selector:
+        entity:
+          domain: number
+    boosted_level:
+      name: Boosted dialogue level
+      default: 3
+      selector:
+        number:
+          min: 0
+          max: 3
+          step: 1
+    restore_value_helper:
+      name: Restore-value helper (input_number)
+      description: >
+        Create a small helper (Settings > Devices & Services > Helpers >
+        Number) to remember the pre-alert level so it can be restored --
+        the number entity itself has nowhere to store that.
+      selector:
+        entity:
+          domain: input_number
+
+trigger:
+  - platform: state
+    entity_id: !input weather_alert_entity
+    to: "on"
+    id: alert_started
+  - platform: state
+    entity_id: !input weather_alert_entity
+    from: "on"
+    id: alert_cleared
+
+condition:
+  - condition: state
+    entity_id: !input yamaha_zone_player
+    state: "on"
+
+variables:
+  dialogue_level_entity: !input dialogue_level_entity
+  restore_value_helper: !input restore_value_helper
+
+action:
+  - choose:
+      - conditions:
+          - condition: trigger
+            id: alert_started
+        sequence:
+          - service: input_number.set_value
+            target:
+              entity_id: !input restore_value_helper
+            data:
+              value: "{{ states(dialogue_level_entity) | float(0) }}"
+          - service: number.set_value
+            target:
+              entity_id: !input dialogue_level_entity
+            data:
+              value: !input boosted_level
+      - conditions:
+          - condition: trigger
+            id: alert_cleared
+        sequence:
+          - service: number.set_value
+            target:
+              entity_id: !input dialogue_level_entity
+            data:
+              value: "{{ states(restore_value_helper) | float(0) }}"
+
+mode: restart

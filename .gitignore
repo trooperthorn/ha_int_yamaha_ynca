@@ -23,6 +23,10 @@ docs/_build/
 .vscode/
 
 venv*/
+.venv/
 *.egg-info/
 
 build/
+
+.pytest_cache/
+.ruff_cache/

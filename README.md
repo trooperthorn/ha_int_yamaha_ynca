@@ -7,6 +7,12 @@
 
 Minimum required Home Assistant version is: 2025.10.0
 
+> This repo also hosts a second, separate integration:
+> [Yamaha AV Receiver (YNC)](custom_components/yamaha_ync/README.md),
+> `custom_components/yamaha_ync/`, built on Yamaha's HTTP/XML **YNC**
+> protocol rather than YNCA -- for receivers where that's the better fit.
+> It's independent of everything below; see its own README for details.
+
 * [About Yamaha (YNCA)](#description)
 * [Working models](#working-models)
 * [Supported functionality](#supported-functionality)

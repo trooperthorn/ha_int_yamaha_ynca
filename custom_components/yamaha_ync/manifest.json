@@ -1,0 +1,18 @@
+{
+  "domain": "yamaha_ync",
+  "name": "Yamaha AV Receiver (YNC)",
+  "codeowners": ["@trooperthorn"],
+  "config_flow": true,
+  "documentation": "https://github.com/trooperthorn/ha_int_yamaha_ynca",
+  "integration_type": "device",
+  "iot_class": "local_push",
+  "issue_tracker": "https://github.com/trooperthorn/ha_int_yamaha_ynca/issues",
+  "requirements": [],
+  "ssdp": [
+    {
+      "st": "urn:schemas-upnp-org:device:MediaRenderer:1",
+      "manufacturer": "YAMAHA CORPORATION"
+    }
+  ],
+  "version": "0.1.0"
+}
