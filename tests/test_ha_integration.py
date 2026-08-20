@@ -62,11 +62,18 @@ def bypass_entry_setup():
     `get_zone_capabilities`/`get_zone_status`. `pytest-socket` correctly
     blocks that, but the resulting failed coordinator refresh schedules a
     retry timer that's still pending at test teardown, which trips the test
-    harness's own leaked-background-work assertion. `test_setup_and_unload_entry`
-    below exercises the real setup path (with everything it needs mocked);
-    these flow-focused tests only care about the flow's own outcome.
+    harness's own leaked-background-work assertion. `async_unload_entry`
+    needs bypassing too, for a related reason: with setup faked out,
+    `entry.runtime_data` (the coordinator) was never assigned, so the
+    harness's own automatic teardown-time unload would otherwise crash on
+    `entry.runtime_data.async_stop_push()`. `test_setup_and_unload_entry`
+    below exercises the real setup/unload path (with everything it needs
+    mocked); these flow-focused tests only care about the flow's outcome.
     """
-    with patch("custom_components.yamaha_ync.async_setup_entry", return_value=True):
+    with (
+        patch("custom_components.yamaha_ync.async_setup_entry", return_value=True),
+        patch("custom_components.yamaha_ync.async_unload_entry", return_value=True),
+    ):
         yield
 
 
