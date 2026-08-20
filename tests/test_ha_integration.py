@@ -91,6 +91,11 @@ async def test_user_flow_creates_entry(hass, bypass_entry_setup) -> None:
     assert result["title"] == "RX-A3080"
     assert result["data"] == {"host": "192.168.1.4"}
 
+    # Let anything the (bypassed-but-still-triggered) setup scheduled
+    # actually settle before the test returns, so the harness's teardown-
+    # time background-work check isn't racing it.
+    await hass.async_block_till_done()
+
 
 async def test_user_flow_cannot_connect_shows_error(
     hass, mock_get_device_info: AsyncMock
@@ -138,6 +143,8 @@ async def test_reconfigure_flow_updates_host(hass, bypass_entry_setup) -> None:
     assert result["type"] is FlowResultType.ABORT
     assert result["reason"] == "reconfigure_successful"
     assert entry.data["host"] == "192.168.1.55"
+
+    await hass.async_block_till_done()
 
 
 async def test_setup_and_unload_entry(hass) -> None:
