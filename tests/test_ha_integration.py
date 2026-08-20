@@ -51,7 +51,26 @@ def mock_get_device_info():
         yield mocked
 
 
-async def test_user_flow_creates_entry(hass) -> None:
+@pytest.fixture
+def bypass_entry_setup():
+    """Stop a flow-only test's newly-created/updated entry from actually
+    being set up for real.
+
+    Creating (or reconfiguring) a config entry via `hass.config_entries.flow`
+    isn't just a flow-level event -- HA follows through and calls this
+    integration's real `async_setup_entry`, which reaches the network via
+    `get_zone_capabilities`/`get_zone_status`. `pytest-socket` correctly
+    blocks that, but the resulting failed coordinator refresh schedules a
+    retry timer that's still pending at test teardown, which trips the test
+    harness's own leaked-background-work assertion. `test_setup_and_unload_entry`
+    below exercises the real setup path (with everything it needs mocked);
+    these flow-focused tests only care about the flow's own outcome.
+    """
+    with patch("custom_components.yamaha_ync.async_setup_entry", return_value=True):
+        yield
+
+
+async def test_user_flow_creates_entry(hass, bypass_entry_setup) -> None:
     result = await hass.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
@@ -96,7 +115,7 @@ async def test_user_flow_aborts_on_duplicate(hass) -> None:
     assert result["reason"] == "already_configured"
 
 
-async def test_reconfigure_flow_updates_host(hass) -> None:
+async def test_reconfigure_flow_updates_host(hass, bypass_entry_setup) -> None:
     entry = MockConfigEntry(
         domain=DOMAIN, unique_id="0B3961F3", data={"host": "192.168.1.4"}
     )
