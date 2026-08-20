@@ -14,6 +14,11 @@ from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from .coordinator import YncCoordinator
 from .entity import YncZoneEntity
 
+# client.py already serializes every request through its own asyncio.Lock,
+# so there's no need for HA to additionally throttle concurrent entity
+# updates/service calls at the platform level.
+PARALLEL_UPDATES = 0
+
 # Typical dB span for this receiver family (confirmed by prior art in the
 # `rxv` library, not yet re-confirmed against this exact unit's Max Volume
 # setting) -- used only to present a 0-1 slider alongside the precise dB

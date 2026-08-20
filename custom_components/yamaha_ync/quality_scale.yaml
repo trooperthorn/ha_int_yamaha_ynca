@@ -1,0 +1,94 @@
+# Self-assessment against Home Assistant's Integration Quality Scale.
+# Not enforced for HACS-distributed integrations, but kept honest here as
+# the objective definition of "done" for this project -- see README.md's
+# Status section for the same picture in prose.
+rules:
+  # Bronze
+  config-flow: done
+  config-flow-test-coverage: done
+  test-before-configure: done
+  test-before-setup: done
+  unique-config-entry: done
+  entity-unique-id: done
+  has-entity-name: done
+  entity-event-setup:
+    status: exempt
+    comment: >
+      Entities update via the shared coordinator (push + backstop poll),
+      not per-entity event subscriptions.
+  runtime-data: done
+  action-setup:
+    status: exempt
+    comment: No custom entity services registered yet.
+  appropriate-polling: done
+  common-modules: done
+  dependency-transparency: done
+  brands:
+    status: todo
+    comment: Not yet registered in home-assistant/brands.
+  docs-high-level-description: done
+  docs-installation-instructions: done
+  docs-removal-instructions: done
+  docs-actions:
+    status: exempt
+    comment: No custom actions to document yet.
+
+  # Silver
+  config-entry-unloading: done
+  entity-unavailable:
+    status: todo
+    comment: >
+      CoordinatorEntity.available reflects the zone dict, but a real
+      unplug/unreachable-host test hasn't been written yet.
+  log-when-unavailable: todo
+  parallel-updates: done
+  reauthentication-flow:
+    status: exempt
+    comment: No authentication; LAN-trust protocol.
+  action-exceptions: done
+  integration-owner: done
+  test-coverage:
+    status: todo
+    comment: >
+      Protocol/model/client/notify layer (runs anywhere), plus config-flow
+      and setup/unload (tests/test_ha_integration.py, CI/Linux-only -- see
+      README) are covered. Platform entity behavior (media_player, number,
+      select, switch) and coordinator push/backstop-poll branching aren't
+      covered yet.
+
+  # Gold
+  devices: done
+  discovery: done
+  discovery-update-info:
+    status: todo
+    comment: SSDP rediscovery doesn't yet update a stale host on its own.
+  dynamic-devices:
+    status: todo
+    comment: Zone list is read once at setup, not re-evaluated live.
+  stale-devices: todo
+  diagnostics: done
+  repair-issues:
+    status: todo
+    comment: No repair flows for e.g. a broken push listener yet.
+  entity-category: done
+  entity-device-class: done
+  entity-disabled-by-default: todo
+  entity-translations: done
+  icon-translations: done
+  exception-translations: todo
+  reconfiguration-flow: done
+  docs-data-update: done
+  docs-known-limitations: done
+  docs-supported-devices: done
+  docs-supported-functions: done
+  docs-troubleshooting:
+    status: todo
+    comment: No troubleshooting doc yet -- see the assessment's Open Items instead.
+  docs-use-cases: done
+
+  # Platinum
+  async-dependency: done
+  inject-websession: done
+  strict-typing:
+    status: todo
+    comment: Type hints are used throughout, but not yet mypy-checked in CI.

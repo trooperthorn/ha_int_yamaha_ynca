@@ -57,21 +57,42 @@ with the client as built if that turns out to be the right lever.
 
 Phase 1 (client + push listener) and Phase 2 (entities) are implemented and
 validated against real hardware -- `scripts/probe_device.py` performs a
-read-only round trip against a live receiver, and `tests/` covers the
-protocol/model/client/notify-parsing layer using real captured payloads as
-fixtures (21 tests, all passing).
+read-only round trip against a live receiver.
 
-**Not yet done** -- Phase 3 (quality-scale hardening) and Phase 5 (publish):
+Phase 3 (quality-scale hardening) and Phase 4 (blueprints/device triggers)
+are substantially in: `device_trigger.py` (zone powered on/off, input
+changed), `diagnostics.py`, `icons.json`, and a self-assessed
+`quality_scale.yaml` are all in place, alongside `PARALLEL_UPDATES = 0` on
+every platform (the client already serializes requests through its own
+lock). `tests/` has 21 passing tests covering the protocol/model/client/
+notify-parsing layer against real captured payloads, runnable anywhere:
 
-- Config-flow and coordinator tests need a full `pytest-homeassistant-custom-component`
-  harness, not just the lightweight stub used for the protocol-layer tests.
+```bash
+pytest tests/test_xml_protocol.py tests/test_models.py tests/test_client.py tests/test_notify_listener.py -p no:homeassistant
+```
+
+`tests/test_ha_integration.py` covers config-flow (user/error/duplicate/
+reconfigure) and setup/unload against a real `hass` fixture, but **can't run
+locally on native Windows** -- `pytest-homeassistant-custom-component`'s
+event loop policy needs a real loopback socket to even construct itself,
+which collides with `pytest-socket`'s default network block (a
+well-documented Windows/asyncio ProactorEventLoop quirk, not something
+specific to this integration). `.github/workflows/test.yml` runs the full
+suite on `ubuntu-latest`, where this doesn't come up -- that's the real
+pass/fail signal for that file until verified there.
+
+**Still open:**
+
+- Platform entity behavior (media_player, number, select, switch) isn't
+  covered by tests yet -- only config-flow/setup and the protocol layer.
 - Translations exist for English only.
 - `FuncTag_List` (the ~600-flag capability bitmask) isn't decoded --
   entities are gated on the specific fields they need instead.
 - The UPnP push path is implemented per spec but not yet confirmed firing
   in practice on this unit's firmware; see the assessment's open items.
-- Not yet submitted anywhere -- install via HACS as a custom repository
-  pointing at this repo, or by copying `custom_components/yamaha_ync/`
+- Not registered in `home-assistant/brands` yet (Bronze `brands` rule).
+- Not yet published anywhere -- install via HACS as a custom repository
+  pointing at this branch, or by copying `custom_components/yamaha_ync/`
   into your Home Assistant `config/custom_components/` directory.
 
 ## Development
@@ -79,7 +100,7 @@ fixtures (21 tests, all passing).
 ```bash
 python -m venv .venv
 .venv/Scripts/pip install -r requirements_test.txt
-.venv/Scripts/pytest tests/ -v
+.venv/Scripts/pytest tests/ -v          # full suite; needs Linux for test_ha_integration.py
 .venv/Scripts/python scripts/probe_device.py <receiver-ip>   # read-only, safe against real hardware
 ```
 

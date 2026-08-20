@@ -53,5 +53,12 @@
       "sound_program": { "name": "Sound program" },
       "enhancer_type": { "name": "Enhancer type" }
     }
+  },
+  "device_automation": {
+    "trigger_type": {
+      "zone_powered_on": "Zone turned on",
+      "zone_powered_off": "Zone turned off",
+      "input_changed": "Input changed"
+    }
   }
 }

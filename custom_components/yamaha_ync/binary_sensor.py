@@ -13,6 +13,10 @@ from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from .coordinator import YncCoordinator
 from .entity import YncZoneEntity
 
+# Purely derived from data the coordinator already holds -- no requests of
+# its own, so no serialization concern, but declared for consistency.
+PARALLEL_UPDATES = 0
+
 NO_LOCAL_AMP_DESCRIPTION = BinarySensorEntityDescription(
     key="no_local_amplifier",
     translation_key="no_local_amplifier",

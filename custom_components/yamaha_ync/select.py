@@ -25,6 +25,9 @@ from .coordinator import YncCoordinator, ZoneState
 from .entity import YncZoneEntity
 from .xml_protocol import YncProtocolError
 
+# client.py serializes every request through its own asyncio.Lock already.
+PARALLEL_UPDATES = 0
+
 AUTO_ON_OFF = ("Auto", "On", "Off")
 
 

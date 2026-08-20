@@ -21,6 +21,10 @@ from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from .coordinator import YncCoordinator, ZoneState
 from .entity import YncZoneEntity
 
+# Purely derived from data the coordinator already holds -- no requests of
+# its own, so no serialization concern, but declared for consistency.
+PARALLEL_UPDATES = 0
+
 
 @dataclass(frozen=True, kw_only=True)
 class YncSensorDescription(SensorEntityDescription):

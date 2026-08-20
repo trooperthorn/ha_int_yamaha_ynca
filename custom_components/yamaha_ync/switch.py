@@ -14,6 +14,9 @@ from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from .coordinator import YncCoordinator, ZoneState
 from .entity import YncZoneEntity
 
+# client.py serializes every request through its own asyncio.Lock already.
+PARALLEL_UPDATES = 0
+
 
 @dataclass(frozen=True, kw_only=True)
 class YncSwitchDescription(SwitchEntityDescription):
