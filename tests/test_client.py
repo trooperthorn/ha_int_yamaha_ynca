@@ -64,3 +64,62 @@ async def test_get_zone_status_reads_real_main_zone_payload(
     status = await client.get_zone_status("main")
     assert status.volume_db == -41.5
     assert status.input_title == "Great Room TV eARC"
+
+
+@pytest.mark.asyncio
+async def test_get_netusb_play_info_reads_real_spotify_payload(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    client = YncClient("192.168.1.4", session=AsyncMock())
+    monkeypatch.setattr(
+        client, "get", AsyncMock(return_value=_fixture_body("spotify_play_info.xml"))
+    )
+    info = await client.get_netusb_play_info("Spotify")
+    assert info.playback_state == "Stop"
+    assert info.shuffle is True
+    assert info.repeat == "All"
+
+
+@pytest.mark.asyncio
+async def test_recall_scene_builds_expected_put(monkeypatch: pytest.MonkeyPatch) -> None:
+    client = YncClient("192.168.1.4", session=AsyncMock())
+    put_mock = AsyncMock()
+    monkeypatch.setattr(client, "put", put_mock)
+
+    await client.recall_scene("main", 3)
+
+    put_mock.assert_awaited_once_with(["Main_Zone", "Scene", "Scene_Sel"], "Scene 3")
+
+
+@pytest.mark.asyncio
+async def test_netusb_playback_builds_expected_put(monkeypatch: pytest.MonkeyPatch) -> None:
+    client = YncClient("192.168.1.4", session=AsyncMock())
+    put_mock = AsyncMock()
+    monkeypatch.setattr(client, "put", put_mock)
+
+    await client.netusb_playback("NET_RADIO", "Skip Fwd")
+
+    put_mock.assert_awaited_once_with(
+        ["NET_RADIO", "Play_Control", "Playback"], "Skip Fwd"
+    )
+
+
+@pytest.mark.asyncio
+async def test_netusb_set_shuffle_and_repeat_build_expected_puts(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    client = YncClient("192.168.1.4", session=AsyncMock())
+    put_mock = AsyncMock()
+    monkeypatch.setattr(client, "put", put_mock)
+
+    await client.netusb_set_shuffle("Spotify", True)
+    await client.netusb_set_repeat("Spotify", "One")
+
+    assert put_mock.await_args_list[0].args == (
+        ["Spotify", "Play_Control", "Play_Mode", "Shuffle"],
+        "On",
+    )
+    assert put_mock.await_args_list[1].args == (
+        ["Spotify", "Play_Control", "Play_Mode", "Repeat"],
+        "One",
+    )

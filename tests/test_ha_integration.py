@@ -182,7 +182,13 @@ async def test_setup_and_unload_entry(hass) -> None:
     with (
         patch(
             "custom_components.yamaha_ync.client.YncClient.get_zone_capabilities",
-            AsyncMock(return_value=ZoneCapabilities(has_volume=True, room_name="Main")),
+            AsyncMock(
+                return_value=ZoneCapabilities(
+                    has_volume=True,
+                    room_name="Main",
+                    scene_names={"Scene_1": "Movie Viewing", "Scene_2": "TV Viewing"},
+                )
+            ),
         ),
         patch(
             "custom_components.yamaha_ync.client.YncClient.get_zone_status",
@@ -203,6 +209,18 @@ async def test_setup_and_unload_entry(hass) -> None:
         assert entry.state is ConfigEntryState.LOADED
         assert entry.runtime_data.data.device.model_name == "RX-A3080"
         assert "main" in entry.runtime_data.data.zones
+
+        # One media_player and one remote entity for the single "main" zone
+        # this fixture configures -- confirms the new `remote` platform
+        # registered and set up cleanly alongside the existing ones.
+        assert len(hass.states.async_entity_ids("media_player")) == 1
+        remote_entity_ids = hass.states.async_entity_ids("remote")
+        assert len(remote_entity_ids) == 1
+        remote_state = hass.states.get(remote_entity_ids[0])
+        assert remote_state.attributes["activity_list"] == [
+            "Movie Viewing",
+            "TV Viewing",
+        ]
 
         assert await hass.config_entries.async_unload(entry.entry_id)
         await hass.async_block_till_done()

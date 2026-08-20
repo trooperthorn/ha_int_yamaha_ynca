@@ -7,7 +7,7 @@ import logging
 import aiohttp
 
 from .const import CTRL_PATH, ZONE_XML_NODES
-from .models import DeviceInfo, ZoneCapabilities, ZoneStatus
+from .models import DeviceInfo, NetUsbPlayInfo, ZoneCapabilities, ZoneStatus
 from .xml_protocol import build_get, build_put, parse_response
 
 _LOGGER = logging.getLogger(__name__)
@@ -149,6 +149,28 @@ class YncClient:
         await self.put(
             [node, "Volume", "Subwoofer_Trim", "Val"], str(int(stepped * 10))
         )
+
+    async def recall_scene(self, zone_id: str, scene_number: int) -> None:
+        node = ZONE_XML_NODES[zone_id]
+        await self.put([node, "Scene", "Scene_Sel"], f"Scene {scene_number}")
+
+    # -- netusb-family media sources (NET_RADIO, Spotify, SERVER, etc.) ---
+
+    async def get_netusb_play_info(self, source_node: str) -> NetUsbPlayInfo:
+        body = await self.get([source_node, "Play_Info"])
+        return NetUsbPlayInfo.from_response(body[source_node])
+
+    async def netusb_playback(self, source_node: str, command: str) -> None:
+        await self.put([source_node, "Play_Control", "Playback"], command)
+
+    async def netusb_set_shuffle(self, source_node: str, on: bool) -> None:
+        await self.put(
+            [source_node, "Play_Control", "Play_Mode", "Shuffle"],
+            "On" if on else "Off",
+        )
+
+    async def netusb_set_repeat(self, source_node: str, mode: str) -> None:
+        await self.put([source_node, "Play_Control", "Play_Mode", "Repeat"], mode)
 
 
 class YncConnectionError(Exception):

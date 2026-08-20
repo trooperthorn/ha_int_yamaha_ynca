@@ -36,3 +36,40 @@ ZONE_DISPLAY_NAMES: dict[str, str] = {
 }
 
 MANUFACTURER = "Yamaha"
+
+# Input codes that address their own top-level XML node with a Play_Info /
+# Play_Control sub-tree (confirmed live for NET_RADIO, Spotify, SERVER,
+# Bluetooth, AirPlay -- the rest share System/Config/Feature_Existence's own
+# key naming, which every confirmed one matched exactly, so they're included
+# on that pattern rather than each having been individually probed). Tuner
+# has its own separate, differently-shaped Play_Info and is handled apart
+# from this "netusb-family" set.
+NETUSB_FAMILY_INPUTS: frozenset[str] = frozenset(
+    {
+        "NET_RADIO",
+        "SERVER",
+        "USB",
+        "Bluetooth",
+        "AirPlay",
+        "Spotify",
+        "Napster",
+        "TIDAL",
+        "Deezer",
+        "Amazon_Music",
+        "Qobuz",
+        "SiriusXM",
+        "Pandora",
+        "JUKE",
+    }
+)
+
+# Play_Control/Playback values, per the community-documented YAMAHA_AV
+# convention (rxv/pyamaha) -- not yet individually confirmed against this
+# unit's Play_Control container (only that the container itself is real;
+# see client.py), but a wrong value surfaces as a normal RC-based
+# YncProtocolError rather than silently doing nothing.
+PLAYBACK_PLAY = "Play"
+PLAYBACK_STOP = "Stop"
+PLAYBACK_PAUSE = "Pause"
+PLAYBACK_SKIP_FWD = "Skip Fwd"
+PLAYBACK_SKIP_REV = "Skip Rev"

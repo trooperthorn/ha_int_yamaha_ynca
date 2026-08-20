@@ -11,6 +11,7 @@ from .coordinator import YncCoordinator
 
 PLATFORMS: list[Platform] = [
     Platform.MEDIA_PLAYER,
+    Platform.REMOTE,
     Platform.NUMBER,
     Platform.SELECT,
     Platform.SWITCH,

@@ -10,8 +10,8 @@ from homeassistant.core import HomeAssistant
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
 from .client import YncClient, YncConnectionError
-from .const import BACKSTOP_POLL_INTERVAL_SECONDS, DOMAIN
-from .models import DeviceInfo, ZoneCapabilities, ZoneStatus
+from .const import BACKSTOP_POLL_INTERVAL_SECONDS, DOMAIN, NETUSB_FAMILY_INPUTS
+from .models import DeviceInfo, NetUsbPlayInfo, ZoneCapabilities, ZoneStatus
 from .notify_listener import YncEvent, YncNotifyListener
 
 _LOGGER = logging.getLogger(__name__)
@@ -21,6 +21,7 @@ _LOGGER = logging.getLogger(__name__)
 class ZoneState:
     capabilities: ZoneCapabilities
     status: ZoneStatus = field(default_factory=ZoneStatus)
+    media: NetUsbPlayInfo | None = None
 
 
 @dataclass
@@ -58,15 +59,34 @@ class YncCoordinator(DataUpdateCoordinator[YncData]):
         """
         self.hass.async_create_task(self._async_refresh_zone(event.zone_id))
 
+    async def _async_fetch_zone(
+        self, zone_id: str
+    ) -> tuple[ZoneStatus, NetUsbPlayInfo | None]:
+        """One zone's Basic_Status, plus its Play_Info if it's on a
+        netusb-family source.
+
+        Play_Info is *not* part of Basic_Status -- it lives at its own
+        top-level `<source>/Play_Info` node, addressed by whatever the
+        zone's current Input_Sel value is (confirmed live for NET_RADIO,
+        Spotify, SERVER, Bluetooth, and AirPlay). A zone parked on AUDIO3 or
+        similar simply has no Play_Info to fetch.
+        """
+        status = await self.client.get_zone_status(zone_id)
+        media: NetUsbPlayInfo | None = None
+        if status.input_id in NETUSB_FAMILY_INPUTS:
+            media = await self.client.get_netusb_play_info(status.input_id)
+        return status, media
+
     async def _async_refresh_zone(self, zone_id: str) -> None:
         if self.data is None or zone_id not in self.data.zones:
             return
         try:
-            status = await self.client.get_zone_status(zone_id)
+            status, media = await self._async_fetch_zone(zone_id)
         except YncConnectionError as err:
             _LOGGER.debug("Push-triggered refresh of %s failed: %s", zone_id, err)
             return
         self.data.zones[zone_id].status = status
+        self.data.zones[zone_id].media = media
         self.async_set_updated_data(self.data)
 
     async def _async_update_data(self) -> YncData:
@@ -82,14 +102,17 @@ class YncCoordinator(DataUpdateCoordinator[YncData]):
                 device = self.data.device
                 zones = self.data.zones
 
-            # A single Basic_Status GET returns the push-backed properties
-            # (Power/Input/Volume/Play_Info) and the deep AVENTAGE-specific
-            # fields (HDMI, dialogue, tone, etc.) together, so one poll
-            # cadence covers both -- no separate "deep poll" tier needed
-            # unless a future field (e.g. a FuncTag_List decode) needs its
-            # own, slower schedule.
+            # A single Basic_Status GET returns the push-backed Power/Input/
+            # Volume properties alongside the deep AVENTAGE-specific fields
+            # (HDMI, dialogue, tone, etc.) together, so one poll cadence
+            # covers both -- no separate "deep poll" tier needed unless a
+            # future field (e.g. a FuncTag_List decode) needs its own,
+            # slower schedule. Play_Info is the fourth push-backed property
+            # but lives outside Basic_Status entirely (see
+            # _async_fetch_zone) so it's always a second call, only made
+            # when the zone is actually on a netusb-family source.
             for zone_id, zone in zones.items():
-                zone.status = await self.client.get_zone_status(zone_id)
+                zone.status, zone.media = await self._async_fetch_zone(zone_id)
         except YncConnectionError as err:
             raise UpdateFailed(f"Could not reach {self.client.host}: {err}") from err
 

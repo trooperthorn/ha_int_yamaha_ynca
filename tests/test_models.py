@@ -3,7 +3,12 @@ from __future__ import annotations
 
 import pathlib
 
-from custom_components.yamaha_ync.models import DeviceInfo, ZoneCapabilities, ZoneStatus
+from custom_components.yamaha_ync.models import (
+    DeviceInfo,
+    NetUsbPlayInfo,
+    ZoneCapabilities,
+    ZoneStatus,
+)
 from custom_components.yamaha_ync.xml_protocol import parse_response
 
 FIXTURES = pathlib.Path(__file__).parent / "fixtures"
@@ -56,6 +61,52 @@ def test_zone_capabilities_confirms_zone4_has_no_amplifier() -> None:
 
     assert capabilities.has_volume is False
     assert capabilities.room_name == "Kitchen"
+
+
+def test_zone_capabilities_parses_real_scene_names() -> None:
+    body = _load("main_zone_config_scenes.xml")["Main_Zone"]
+    capabilities = ZoneCapabilities.from_response(body)
+
+    assert capabilities.room_name == "Main"
+    assert capabilities.scene_names == {
+        "Scene_1": "Movie Viewing",
+        "Scene_2": "Radio Listening",
+        "Scene_3": "Music Listening",
+        "Scene_4": "NET Audio Listening",
+        "Scene_5": "STB Viewing",
+        "Scene_6": "Game Playing",
+        "Scene_7": "TV Viewing",
+        "Scene_8": "Media Server Listening",
+    }
+
+
+def test_netusb_play_info_from_real_idle_spotify() -> None:
+    body = _load("spotify_play_info.xml")["Spotify"]
+    info = NetUsbPlayInfo.from_response(body)
+
+    assert info.playback_state == "Stop"
+    assert info.title is None
+    assert info.artist is None
+    assert info.shuffle is True
+    assert info.repeat == "All"
+
+
+def test_netusb_play_info_from_populated_airplay() -> None:
+    # The AirPlay/Play_Info *structure* below is confirmed live against the
+    # real receiver, but nothing was actually playing during capture
+    # (Playback_Info was "Pause" with every Meta_Info/Time field empty) --
+    # the values here are hand-filled into that same confirmed shape to
+    # exercise parsing of a populated response.
+    body = _load("airplay_play_info_playing.xml")["AirPlay"]
+    info = NetUsbPlayInfo.from_response(body)
+
+    assert info.playback_state == "Play"
+    assert info.title == "Deacon Blues"
+    assert info.artist == "Steely Dan"
+    assert info.album == "Aja"
+    assert info.elapsed_seconds == 87
+    assert info.total_seconds == 214
+    assert info.album_art_url == "http://192.168.1.4/AlbumART/1"
 
 
 def test_device_info_from_system_config() -> None:

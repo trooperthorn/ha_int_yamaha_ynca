@@ -29,7 +29,8 @@ confirms are present) is modeled as its own HA device:
 
 | Platform | Entities |
 |---|---|
-| `media_player` | Power, mute, volume, source select |
+| `media_player` | Power, mute, volume (+ step up/down), source select, play/pause/stop/next/previous, shuffle, repeat, title/artist/album/duration/position/artwork -- the last block only while the zone is on a netusb-family source (NET_RADIO, Spotify, SERVER, Bluetooth, AirPlay, and siblings; see below) |
+| `remote` | One per zone. Scenes (`Config/Name/Scene` -- e.g. "Movie Viewing", "TV Viewing") exposed as `RemoteEntityFeature.ACTIVITY`; `send_command` also accepts input names and `play`/`pause`/`stop`/`next`/`previous` |
 | `number` | Volume (dB), subwoofer trim, dialogue lift/level, DTS dialogue control |
 | `select` | YPAO volume, extra bass, adaptive DRC (Auto/On/Off) |
 | `switch` | Party mode, pure direct, one per HDMI output |
@@ -38,7 +39,34 @@ confirms are present) is modeled as its own HA device:
 
 Sound program and enhancer type are read-only `sensor`s rather than
 `select`s deliberately -- the full valid-option list for either isn't
-confirmed for this model, only today's live value.
+confirmed for this model (two guesses at the paths that would enumerate it,
+`Program_Sel/Config` and `Program_Sel/Avail`, both came back HTTP 400 --
+genuinely invalid on this model, not just non-leaf). `media_player`'s
+`select_sound_mode` is the same story and stays unsupported for the same
+reason -- a `select`/sound-mode list with guessed options would either
+reject valid choices or silently accept invalid ones.
+
+**netusb-family playback** (`media_player` transport controls, `remote`'s
+`play`/`pause`/etc. commands): `Play_Info` for a network source lives at its
+*own* top-level XML node (`<Spotify>`, `<NET_RADIO>`, `<SERVER>`, etc.), not
+nested under the zone's `Basic_Status` -- confirmed live for NET_RADIO,
+Spotify, SERVER, Bluetooth, and AirPlay (Napster/TIDAL/Deezer/Amazon_Music/
+Qobuz/SiriusXM/Pandora/USB/JUKE are included on the same `Feature_Existence`
+key-naming pattern, not individually probed). The transport command values
+themselves (`Play`/`Stop`/`Pause`/`Skip Fwd`/`Skip Rev`) are the
+community-documented (`rxv`/`pyamaha`) convention, not yet confirmed against
+this unit's `Play_Control` container -- confirmed real as a container (a
+`GetParam` on it returns RC=2, "valid node, not leaf-gettable", the same
+signature every other known-real write-only container gives), just not that
+exact command vocabulary. A wrong value surfaces as a normal RC-based error,
+not a silent no-op. Shuffle/repeat's *set* paths, by contrast, are fully
+GET-confirmed (`Play_Control/Play_Mode/Shuffle` and `.../Repeat` both
+round-tripped live against Spotify's actual current values).
+
+**Tuner** (`Tuner/Play_Info`, `Tuner/Config`) was probed and returns a full
+band/frequency/preset/signal structure with real FM/AM step sizes, but isn't
+wired into any entity yet -- it's a different shape than the netusb-family
+sources and didn't fit this pass's scope.
 
 ## A live finding worth flagging
 
@@ -64,16 +92,19 @@ are substantially in: `device_trigger.py` (zone powered on/off, input
 changed), `diagnostics.py`, `icons.json`, and a self-assessed
 `quality_scale.yaml` are all in place, alongside `PARALLEL_UPDATES = 0` on
 every platform (the client already serializes requests through its own
-lock). `tests/` has 21 passing tests covering the protocol/model/client/
-notify-parsing layer against real captured payloads, runnable anywhere:
+lock). `tests/` has 28 passing tests covering the protocol/model/client/
+notify-parsing layer against real captured payloads (including the
+netusb-family Play_Info shapes for Spotify/AirPlay and the real scene-name
+config), runnable anywhere:
 
 ```bash
 pytest tests/test_xml_protocol.py tests/test_models.py tests/test_client.py tests/test_notify_listener.py -p no:homeassistant
 ```
 
 `tests/test_ha_integration.py` covers config-flow (user/error/duplicate/
-reconfigure) and setup/unload against a real `hass` fixture -- 5 more
-tests, **26 total**, all green on `.github/workflows/test.yml` (`ubuntu-latest`).
+reconfigure) and setup/unload (now asserting the `remote` platform and its
+activity list too) against a real `hass` fixture -- 5 more tests, **33
+total**, all green on `.github/workflows/test.yml` (`ubuntu-latest`).
 It can't run locally on native Windows: `pytest-homeassistant-custom-component`'s
 event loop policy needs a real loopback socket to even construct itself,
 which collides with `pytest-socket`'s default network block (a
@@ -88,8 +119,16 @@ for) before landing green.
 
 **Still open:**
 
-- Platform entity behavior (media_player, number, select, switch) isn't
-  covered by tests yet -- only config-flow/setup and the protocol layer.
+- Platform entity behavior (media_player, remote, number, select, switch)
+  isn't covered by tests yet beyond confirming the entities register and
+  read the right activity list -- only config-flow/setup, the protocol
+  layer, and models.py's parsing of every response shape are covered.
+- `Play_Control/Playback`'s exact command vocabulary isn't confirmed
+  against this unit (see the netusb-family note above).
+- `BROWSE_MEDIA` isn't implemented -- `SERVER/List_Info` (confirmed live)
+  has the menu/cursor structure for it, but full list navigation is a
+  meaningfully bigger scope than this pass covered.
+- Tuner isn't wired into any entity yet, despite being fully probed.
 - Translations exist for English only.
 - `FuncTag_List` (the ~600-flag capability bitmask) isn't decoded --
   entities are gated on the specific fields they need instead.

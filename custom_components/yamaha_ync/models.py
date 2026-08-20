@@ -72,14 +72,17 @@ class ZoneCapabilities:
 
     has_volume: bool
     room_name: str | None = None
+    scene_names: dict[str, str] = field(default_factory=dict)
 
     @classmethod
     def from_response(cls, body: dict) -> ZoneCapabilities:
         volume_existence = dig(body, ["Config", "Volume_Existence"])
         room_name = dig(body, ["Config", "Name", "Zone"])
+        scenes = dig(body, ["Config", "Name", "Scene"]) or {}
         return cls(
             has_volume=volume_existence != "Not Exist",
             room_name=_val(room_name),
+            scene_names={k: v for k, v in scenes.items() if isinstance(v, str) and v},
         )
 
 
@@ -155,6 +158,53 @@ class ZoneStatus:
             dialogue_lift=_int(dialogue.get("Dialogue_Lift")),
             dialogue_level=_int(dialogue.get("Dialogue_Lvl")),
             dts_dialogue_control=_int(dialogue.get("DTS_Dialogue_Control")),
+        )
+
+
+@dataclass
+class NetUsbPlayInfo:
+    """<node>/Play_Info for a network/USB media source (NET_RADIO, Spotify,
+    SERVER, Bluetooth, AirPlay, and the other services in
+    const.NETUSB_FAMILY_INPUTS).
+
+    Confirmed live for NET_RADIO, Spotify, SERVER, Bluetooth, and AirPlay --
+    each uses a slightly different subset of Meta_Info field names (radio
+    has Station/Song, Spotify has Artist/Track, others have Artist/Song),
+    normalized here into one shape.
+    """
+
+    playback_state: str | None = None  # "Play" / "Pause" / "Stop"
+    title: str | None = None
+    artist: str | None = None
+    album: str | None = None
+    station: str | None = None
+    elapsed_seconds: int | None = None
+    total_seconds: int | None = None
+    shuffle: bool | None = None
+    repeat: str | None = None  # "Off" / "One" / "All"
+    album_art_url: str | None = None
+    device_name: str | None = None  # Bluetooth's paired device, when connected
+
+    @classmethod
+    def from_response(cls, body: dict) -> NetUsbPlayInfo:
+        info = body.get("Play_Info", body)
+        meta = info.get("Meta_Info", {}) or {}
+        time_node = info.get("Time", {}) or {}
+        play_mode = info.get("Play_Mode", {}) or {}
+        album_art = info.get("Album_ART", {}) or {}
+
+        return cls(
+            playback_state=_val(info.get("Playback_Info")),
+            title=_val(meta.get("Song")) or _val(meta.get("Track")),
+            artist=_val(meta.get("Artist")),
+            album=_val(meta.get("Album")),
+            station=_val(meta.get("Station")),
+            elapsed_seconds=_int(time_node.get("Elapsed")),
+            total_seconds=_int(time_node.get("Total")),
+            shuffle=_bool_on_off(play_mode.get("Shuffle")),
+            repeat=_val(play_mode.get("Repeat")),
+            album_art_url=_val(album_art.get("URL")),
+            device_name=_val(info.get("Device_Name")),
         )
 
 
