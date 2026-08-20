@@ -30,6 +30,19 @@ FAKE_DEVICE = DeviceInfo(
 
 
 @pytest.fixture(autouse=True)
+def auto_enable_custom_integrations(enable_custom_integrations):
+    """Let hass's component loader see custom_components/yamaha_ync.
+
+    Scoped to this file rather than a global conftest.py fixture: pulling
+    in the `enable_custom_integrations` fixture unconditionally would load
+    the whole pytest-homeassistant-custom-component plugin for every test
+    in the suite, including the lightweight protocol-layer tests that are
+    meant to run without it (see conftest.py's docstring).
+    """
+    yield
+
+
+@pytest.fixture(autouse=True)
 def mock_get_device_info():
     with patch(
         "custom_components.yamaha_ync.client.YncClient.get_device_info",
