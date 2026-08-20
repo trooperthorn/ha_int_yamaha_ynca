@@ -7,11 +7,7 @@ import voluptuous as vol
 from homeassistant.config_entries import ConfigFlow, ConfigFlowResult
 from homeassistant.const import CONF_HOST
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
-
-try:  # HA >= 2025.3 moved this out of the ssdp component
-    from homeassistant.helpers.service_info.ssdp import SsdpServiceInfo
-except ImportError:  # pragma: no cover - exercised on older HA cores
-    from homeassistant.components.ssdp import SsdpServiceInfo
+from homeassistant.helpers.service_info.ssdp import SsdpServiceInfo
 
 from .client import YncClient, YncConnectionError
 from .const import DOMAIN
