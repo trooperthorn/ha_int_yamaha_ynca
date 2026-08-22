@@ -55,7 +55,7 @@ STRAIGHT = "Straight"
 SUPPORTED_MEDIA_ID_TYPES = ["dabpreset", "fmpreset", "preset"]
 
 
-def _trim_whitespace(
+def trim_whitespace(
     func: Callable[..., str | None],
 ) -> Callable[..., str | None]:
     @wraps(func)
@@ -146,6 +146,8 @@ class YamahaYncaZone(MediaPlayerEntity):
         self._attr_unique_id = self._device_id
         self._attr_device_info = DeviceInfo(identifiers={(DOMAIN, self._device_id)})
 
+        self._last_updated_radiotext_a: bool = True
+
         self._subunit_callbacks: dict[ynca.subunit.SubunitBase, Any] = {}
 
     def _get_zone_id(self) -> str:
@@ -181,6 +183,9 @@ class YamahaYncaZone(MediaPlayerEntity):
 
         if function == "ELAPSEDTIME":
             self._attr_media_position_updated_at = dt.utcnow()
+
+        if function in ["RDSTXTA", "RDSTXTB"]:
+            self._last_updated_radiotext_a = function == "RDSTXTA"
 
         self.schedule_update_ha_state()
 
@@ -555,7 +560,7 @@ class YamahaYncaZone(MediaPlayerEntity):
         return None
 
     @property
-    @_trim_whitespace
+    @trim_whitespace
     def media_title(self) -> str | None:
         """Title of current playing media."""
         if subunit := self._get_input_subunit():
@@ -563,15 +568,24 @@ class YamahaYncaZone(MediaPlayerEntity):
                 return song
             if track := getattr(subunit, "track", None):
                 return track
-            if (
-                isinstance(subunit, ynca.subunits.dab.Dab)
-                and subunit.band is ynca.BandDab.DAB
-            ):
-                return subunit.dabdlslabel or None
+            if isinstance(subunit, ynca.Dab):
+                if subunit.band is ynca.BandDab.DAB:
+                    return subunit.dabdlslabel if subunit.dabdlslabel else None
+                if subunit.band is ynca.BandDab.FM:
+                    return subunit.fmrdstxt if subunit.fmrdstxt else None
+            if isinstance(subunit, ynca.Tun) and subunit.band is ynca.BandTun.FM:
+                radiotext = (
+                    subunit.rdstxta
+                    if self._last_updated_radiotext_a
+                    else subunit.rdstxtb
+                )
+                # For some reason radiotext reported by the receiver often has trailing underscores, so strip them off
+                # And sometimes it is mixed with spaces, so strip those off too
+                return radiotext.rstrip("_ ") if radiotext else None
         return None
 
     @property
-    @_trim_whitespace
+    @trim_whitespace
     def media_artist(self) -> str | None:
         """Artist of current playing media, music track only."""
         if (subunit := self._get_input_subunit()) and (
@@ -581,7 +595,7 @@ class YamahaYncaZone(MediaPlayerEntity):
         return None
 
     @property
-    @_trim_whitespace
+    @trim_whitespace
     def media_album_name(self) -> str | None:
         """Album name of current playing media, music track only."""
         if (subunit := self._get_input_subunit()) and (
@@ -591,7 +605,7 @@ class YamahaYncaZone(MediaPlayerEntity):
         return None
 
     @property
-    @_trim_whitespace
+    @trim_whitespace
     def media_channel(self) -> str | None:  # noqa: PLR0911
         """Channel currently playing."""
         subunit = self._get_input_subunit()
