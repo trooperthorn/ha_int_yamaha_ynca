@@ -36,15 +36,27 @@ Other commands
 
 ## Release
 
-Releases are automatic. Merging to `main` is the release trigger: nobody
-bumps `manifest.json`'s version or pushes a tag by hand.
+Releases are automatic. `main` is branch-protected, so nobody bumps
+`manifest.json`'s version or pushes a tag by hand; a normal PR merge is the
+only path onto `main`, release-bearing or not.
 
-`.github/workflows/release.yaml` runs on every push to `main`. It waits for
-the same gates that guard pull requests (pytest, ruff, mypy, hassfest, HACS
-validation), computes the next `v<YYYY.MM.DD>.<build>` version, writes it
-into `manifest.json`, builds the HACS archive, and publishes a GitHub
-Release with an SPDX SBOM, a `SHA256SUMS` checksum file, and build/SBOM
-attestations (verify with `gh attestation verify`).
+Two workflows cooperate:
+
+- `.github/workflows/prepare-release.yml` runs after every successful
+  `Release` run. If `main` has release-bearing changes since the last
+  published tag, it uses a GitHub App token (not the default `GITHUB_TOKEN`,
+  which can't push past branch protection) to compute the next
+  `v<YYYY.MM.DD>.<build>` version, push it on `automation/calver-release`,
+  open a PR, and auto-merge it once the required checks pass.
+- `.github/workflows/release.yaml` runs on every push to `main`, including
+  that auto-merge. It waits for the same gates that guard pull requests
+  (pytest, ruff, mypy, hassfest, HACS validation), reads the version already
+  in `manifest.json` (via `.release.json`), tags it, builds the HACS
+  archive, and publishes a GitHub Release with an SPDX SBOM, a
+  `SHA256SUMS` checksum file, and build/SBOM attestations (verify with
+  `gh attestation verify`). It's a no-op if that version is already
+  published, which is what happens on an ordinary code-only merge before
+  `prepare-release.yml` has had a chance to bump the version.
 
 Cleaning up the auto-generated release notes on [the releases page](https://github.com/trooperthorn/ha_int_yamaha_ynca/releases)
 afterward, and adding a breaking-changes section when one applies, is still
