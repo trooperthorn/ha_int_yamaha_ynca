@@ -32,7 +32,7 @@ keywords = [
   "yamaha-avr",
   "yamaha-receiver",
 ]
-requires-python = ">=3.13"
+requires-python = ">=3.14"
 
 # Also update ynca version in manifest.json
 dependencies = ["ynca==6.2.0"]
@@ -51,7 +51,7 @@ dev = [
   "pytest-cov",
   "pytest-mock",
   "awesomeversion>=24.0.0",
-  "homeassistant==2025.10.0",
+  "homeassistant==2026.8.0",
   # Don't pin versions below, they will follow HA's versions
   "homeassistant-stubs",
   "pytest-homeassistant-custom-component",
