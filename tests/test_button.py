@@ -9,7 +9,7 @@ from custom_components.yamaha_ynca.button import (
     async_setup_entry,
 )
 
-from .conftest import setup_integration
+from .conftest import setup_integration, update_entry_options
 
 if TYPE_CHECKING:
     from homeassistant.core import HomeAssistant
@@ -63,7 +63,7 @@ async def test_async_setup_entry_configured_number_of_scenes(
     integration = await setup_integration(hass, mock_ynca)
     options = dict(integration.entry.options)
     options["ZONE2"] = {yamaha_ynca.const.CONF_NUMBER_OF_SCENES: 11}
-    hass.config_entries.async_update_entry(integration.entry, options=options)
+    await update_entry_options(hass, mock_ynca, integration.entry, options)
 
     add_entities_mock = Mock()
     await async_setup_entry(hass, integration.entry, add_entities_mock)

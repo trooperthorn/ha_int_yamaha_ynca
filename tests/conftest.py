@@ -299,3 +299,24 @@ async def setup_integration(
             await hass.async_block_till_done()
 
     return Integration(entry, on_disconnect, mock_ynca)
+
+
+async def update_entry_options(
+    hass: HomeAssistant,
+    mock_ynca: ynca.YncaApi,
+    entry: MockConfigEntry,
+    options: dict[str, Any],
+) -> None:
+    """Update a config entry's options and let its reload settle.
+
+    A changed option fires the integration's update listener, which reloads
+    the entry (see async_update_options in __init__.py). That reload
+    reconnects with a fresh ynca.YncaApi instance, so it needs the same mock
+    setup_integration's own initial connect used, or it fails against a real
+    (nonexistent) receiver and leaves entry.runtime_data deleted -- see
+    ConfigEntry.async_unload in Home Assistant core, which deletes
+    runtime_data on every successful unload, reload included.
+    """
+    with patch("ynca.YncaApi", return_value=mock_ynca):
+        hass.config_entries.async_update_entry(entry, options=options)
+        await hass.async_block_till_done()

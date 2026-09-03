@@ -38,11 +38,7 @@ def scale(
 
 
 def receiver_requires_audio_input_workaround(modelname: str) -> bool:
-    # These models do not report the (single) AUDIO input properly
-    # Reported for RX-V475, including RX-V575, HTR-4066, HTR-5066 because they share firmware
-    # See https://github.com/mvdwetering/yamaha_ynca/issues/230
-    # Also for RX-V473, including RX-V573, HTR-4065, HTR-5065 because they share firmware
-    # See https://github.com/mvdwetering/yamaha_ynca/discussions/234
+    # Model list and why: see docs/protocol.md#audio-input-reporting.
     return modelname in [
         "RX-V475",
         "RX-V575",

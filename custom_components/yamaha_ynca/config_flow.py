@@ -79,8 +79,8 @@ class YamahaYncaConfigFlow(ConfigFlow, domain=DOMAIN):
 
     @staticmethod
     @callback
-    def async_get_options_flow(config_entry: ConfigEntry) -> OptionsFlowHandler:
-        return OptionsFlowHandler(config_entry)
+    def async_get_options_flow(_config_entry: ConfigEntry) -> OptionsFlowHandler:
+        return OptionsFlowHandler()
 
     async def async_step_user(
         self, _user_input: dict[str, Any] | None = None
@@ -120,10 +120,11 @@ class YamahaYncaConfigFlow(ConfigFlow, domain=DOMAIN):
 
             if self.source == SOURCE_RECONFIGURE:
                 reconfigure_entry = self._get_reconfigure_entry()
-                return self.async_update_reload_and_abort(
+                # The entry's update listener already reloads on every
+                # entry update, so this avoids reloading twice.
+                return self.async_update_and_abort(
                     reconfigure_entry,
                     data_updates=data,
-                    reload_even_if_entry_is_unchanged=False,
                 )
 
             return self.async_create_entry(title=check_result.modelname, data=data)

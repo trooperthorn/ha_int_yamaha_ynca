@@ -36,13 +36,22 @@ Other commands
 
 ## Release
 
-- Run the `release.sh` script. Often no alpha/beta is needed, so just release it. Make sure to switch back to dev once done.
-- After pushing the CI will create [a draft release](https://github.com/mvdwetering/yamaha_ynca/releases). Wait for it to be ready.
-- Cleanup the release notes if needed.
-- Add breaking changes section if needed.
-- Tick the discussion thread box.
-- Tick the pre-release box if it is an alpha/beta. Also mention in the release notes that it is an alpha/beta for testing.
-- Publish the release.
+Releases are automatic. Merging to `main` is the release trigger: nobody
+bumps `manifest.json`'s version or pushes a tag by hand.
+
+`.github/workflows/release.yaml` runs on every push to `main`. It waits for
+the same gates that guard pull requests (pytest, ruff, mypy, hassfest, HACS
+validation), computes the next `v<YYYY.MM.DD>.<build>` version, writes it
+into `manifest.json`, builds the HACS archive, and publishes a GitHub
+Release with an SPDX SBOM, a `SHA256SUMS` checksum file, and build/SBOM
+attestations (verify with `gh attestation verify`).
+
+Cleaning up the auto-generated release notes on [the releases page](https://github.com/trooperthorn/ha_int_yamaha_ynca/releases)
+afterward, and adding a breaking-changes section when one applies, is still
+a manual step.
+
+`release.py` predates this automation and is no longer part of the release
+path; it's kept only until it's confirmed safe to remove.
 
 ## Update ynca package
 

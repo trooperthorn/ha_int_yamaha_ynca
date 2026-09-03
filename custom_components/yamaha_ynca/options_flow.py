@@ -27,8 +27,6 @@ from .input_helpers import InputHelper
 if TYPE_CHECKING:
     from homeassistant.config_entries import ConfigFlowResult
 
-    from . import YamahaYncaConfigEntry
-
 STEP_ID_INIT = "init"
 STEP_ID_NO_CONNECTION = "no_connection"
 STEP_ID_GENERAL = "general"
@@ -70,8 +68,7 @@ def get_next_step_id(flow: OptionsFlowHandler, current_step: str) -> str:
 
 
 class OptionsFlowHandler(config_entries.OptionsFlow):
-    def __init__(self, config_entry: YamahaYncaConfigEntry) -> None:
-        self.options = deepcopy(dict(config_entry.options))
+    options: dict[str, Any]
 
     async def do_next_step(self, current_step_id: str) -> ConfigFlowResult:
         next_step_id = get_next_step_id(self, current_step_id)
@@ -81,6 +78,8 @@ class OptionsFlowHandler(config_entries.OptionsFlow):
         self, _user_input: dict[str, Any] | None = None
     ) -> ConfigFlowResult:
         """Perform basic sanity checks before configuring options."""
+        self.options = deepcopy(dict(self.config_entry.options))
+
         # The configentry in the optionsflow is _only_ a YamahaYncaConfigEntry when there is a connection
         # Otherwise it is a "plain" ConfigEntry, so without runtime_data
         # A normal isinstance check does not seem to work with type alias, to check for runtime_data attribute
@@ -95,10 +94,7 @@ class OptionsFlowHandler(config_entries.OptionsFlow):
     ) -> ConfigFlowResult:
         """No connection dialog."""
         if user_input is not None:
-            # Strangely enough there is no title on the abort box
-            # I guess because optionflows are not expected to be aborted
-            # So exit with "success" instead through the done step and it will rewrite current settings
-            # return self.async_abort(reason="no_connection")  # noqa: ERA001
+            # Exits as success, not abort: see docs/design.md#options-flow-no-connection-dialog-exits-as-success-not-abort.
             return await self.async_step_done()
 
         return self.async_show_form(step_id=STEP_ID_NO_CONNECTION)

@@ -3,15 +3,9 @@
 > Announcement: I have replaced my receiver with a new one which is not a Yamaha.
 >
 > What does that mean for this integration?
-> In practice probably not a lot. There is usually not a lot of maintenance needed, so I intend to keep the integration working, do small fixes and answer questions, but won't do big reworks anymore. To make it easier for others to contribute and submit PRs I [documented some details about the development](docs).
+> In practice probably not a lot. There is usually not a lot of maintenance needed, so I intend to keep the integration working, do small fixes and answer questions, but won't do big reworks anymore. To make it easier for others to contribute and submit PRs I [documented some details about the development](docs/README.md).
 
-Minimum required Home Assistant version is: 2025.10.0
-
-> This repo also hosts a second, separate integration:
-> [Yamaha AV Receiver (YNC)](custom_components/yamaha_ync/README.md),
-> `custom_components/yamaha_ync/`, built on Yamaha's HTTP/XML **YNC**
-> protocol rather than YNCA -- for receivers where that's the better fit.
-> It's independent of everything below; see its own README for details.
+Minimum required Home Assistant version is: 2026.8.0
 
 * [About Yamaha (YNCA)](#description)
 * [Working models](#working-models)
