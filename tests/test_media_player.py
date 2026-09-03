@@ -376,7 +376,14 @@ async def test_mediaplayer_entity_source_rename(
 
     # Change the name an trigger update callback
     mock_ynca.sys.inpnamehdmi3 = "NEWNAME"
-    sys_callback = mock_ynca.sys.register_update_callback.call_args.args[0]
+    # Other entities (e.g. the "all zones power" switch) also register a sys
+    # callback, and platform setup order isn't deterministic, so the last
+    # registered call isn't reliably this entity's; find it by entity_id.
+    sys_callback = next(
+        call.args[0]
+        for call in mock_ynca.sys.register_update_callback.call_args_list
+        if call.args[0].__self__.entity_id == entity_id
+    )
     sys_callback("INPNAMEHDMI3", "NEWNAME")  # Value does not really matter
     await hass.async_block_till_done()
 
