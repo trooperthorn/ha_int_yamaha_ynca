@@ -6,7 +6,7 @@ Guidelines for AI agents working on this repository.
 
 **Yamaha YNCA** is a custom Home Assistant integration for Yamaha AV receivers using the YNCA protocol over serial or network connections. It supports Yamaha RX-A, RX-V, AVENTAGE, TSR, and HTR receivers from 2010 onwards.
 
-- **Language**: Python 3.13+
+- **Language**: Python 3.14+
 - **Framework**: Home Assistant Custom Component
 - **Core dependency**: [`ynca`](https://github.com/mvdwetering/ynca) — the YNCA protocol library
 
@@ -44,10 +44,10 @@ bump_ynca_version.sh             # Update ynca package version everywhere
 
 ## Dev Environment Setup
 
-Requires **Python 3.13**.
+Requires **Python 3.14**.
 
 ```bash
-python3.13 -m venv venv
+python3.14 -m venv venv
 source ./venv/bin/activate
 pip install -e .[dev]
 ```
@@ -218,15 +218,17 @@ All Markdown files in this repository must be free of [markdownlint](https://git
 
 ## CI / CD
 
-Three GitHub Actions workflows run on every push and PR to `dev`/`master`:
+Three GitHub Actions workflows:
 
 | Workflow | Trigger | What it does |
 |---|---|---|
-| `validations.yaml` | Push, PR, nightly | pytest, mypy, hassfest, HACS validation |
-| `hassfest.yaml` | Push, PR | Home Assistant integration compliance check |
-| `release.yaml` | Tag `v*.*.*` | Zip integration, create draft GitHub release |
+| `validations.yaml` ("Release gates") | Push to main, PR, nightly, `workflow_call` | pytest, ruff, mypy, hassfest, HACS validation |
+| `security.yaml` | Push, PR, weekly | CodeQL (Python), bandit |
+| `release.yaml` | Push to main, `workflow_dispatch` | Runs `validations.yaml`, then computes the next `v<YYYY.MM.DD>.<build>` version, bumps `manifest.json`, tags, builds the HACS archive, and publishes a GitHub Release with an SPDX SBOM, SHA256SUMS, and build/SBOM attestations |
 
-A change is considered CI-safe if `./coverage.sh` passes cleanly.
+Releases are automatic on every merge to `main`; nobody creates tags or
+bumps `manifest.json`'s version by hand. A change is considered CI-safe if
+`./coverage.sh` passes cleanly.
 
 ---
 

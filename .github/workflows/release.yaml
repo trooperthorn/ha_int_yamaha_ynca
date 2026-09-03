@@ -1,45 +1,175 @@
-name: Create release from tag
-permissions:
-  contents: write
+# Reconciles main into a complete, verifiable GitHub Release. A normal merge
+# is the release trigger: nobody bumps manifest.json's version or pushes a
+# tag by hand -- this workflow computes the next v<YYYY.MM.DD>.<build>
+# version itself, commits it, tags it, and publishes.
+#
+# Known limitation: version resolution scans existing tags for today's date,
+# so a manual "re-run jobs" against an already-released commit mints the
+# next sequential build number and publishes a second, functionally
+# identical release rather than detecting "this commit already shipped".
+# That's a harmless extra release, not a broken one -- avoid it by using
+# workflow_dispatch or a fresh push instead of re-running a stale run.
+name: Release
 
 on:
   push:
-    tags:
-      - 'v[0-9]+.[0-9]+.[0-9]+*'
+    branches:
+      - main
+  workflow_dispatch:
+
+concurrency:
+  group: release-${{ github.repository }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
 
 jobs:
+  # Use the same gate that guards pull requests. Publishing cannot begin
+  # until pytest, hassfest, and the HACS validator all pass.
+  tests:
+    uses: ./.github/workflows/validations.yaml
+    permissions:
+      contents: read
+
   release:
-    runs-on: "ubuntu-latest"
+    if: github.ref == 'refs/heads/main'
+    needs: tests
+    runs-on: ubuntu-latest
+    permissions:
+      attestations: write
+      contents: write
+      id-token: write
     steps:
-      - uses: actions/checkout@v5
+      - name: Check out main with full history
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          persist-credentials: false
+          fetch-depth: 0
 
-      - run: |
-          echo Checkout done for $GITHUB_REF
-
-      - name: Zip every custom_components/* dir
-        # This repo now hosts more than one integration (yamaha_ynca,
-        # yamaha_ync). Building a zip per subdirectory -- rather than
-        # assuming there's exactly one -- keeps yamaha_ynca's asset name
-        # (yamaha_ynca.zip, what hacs.json's zip_release config expects)
-        # stable regardless of how many integrations end up living here.
+      - name: Resolve the next calendar version
+        id: version
+        shell: bash
         run: |
-          for dir in custom_components/*/; do
-            name=$(basename "$dir")
-            (cd "$dir" && zip -r "../../${name}.zip" ./*)
-            echo "Built ${name}.zip"
-          done
+          set -euo pipefail
+          git fetch --tags --force
 
-      - name: Create Release
-        # Started from: https://stackoverflow.com/questions/75679683/how-can-i-auto-generate-a-release-note-and-create-a-release-using-github-actions
+          TODAY="$(date -u +%Y.%m.%d)"
+          LAST_BUILD="$(git tag -l "v${TODAY}.*" \
+            | sed -E "s/^v${TODAY}\.//" \
+            | grep -E '^[0-9]+$' \
+            | sort -n | tail -1 || true)"
+          NEXT_BUILD=$(( ${LAST_BUILD:-0} + 1 ))
+          VERSION="${TODAY}.${NEXT_BUILD}"
+          TAG="v${VERSION}"
+
+          echo "Next version: $VERSION (tag $TAG)"
+          printf 'version=%s\n' "$VERSION" >> "$GITHUB_OUTPUT"
+          printf 'tag=%s\n' "$TAG" >> "$GITHUB_OUTPUT"
+
+      - name: Build archive and bump manifest.json
+        run: |
+          python3 scripts/build_release_artifacts.py \
+            --set-version "${{ steps.version.outputs.version }}" \
+            --output dist/yamaha_ynca.zip
+
+      - name: Commit the version bump
+        id: bump
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          tag: ${{ github.ref_name }}
-        # --discussion-category "General" not possible for draft releases :/
+          TAG: ${{ steps.version.outputs.tag }}
         run: |
-          gh release create "$tag" ./*.zip \
-              --repo="$GITHUB_REPOSITORY" \
-              --title="$tag" \
-              --generate-notes \
-              --draft
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add custom_components/yamaha_ynca/manifest.json
+          if git diff --cached --quiet; then
+            echo "manifest.json already at this version; nothing to commit."
+          else
+            git commit -m "Release ${TAG}"
+            git push origin HEAD:main
+          fi
+          printf 'sha=%s\n' "$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+
+      - name: Tag the release commit
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ steps.version.outputs.tag }}
+          SHA: ${{ steps.bump.outputs.sha }}
+        run: |
+          set -euo pipefail
+          gh api --method POST \
+            "/repos/${GITHUB_REPOSITORY}/git/refs" \
+            --field "ref=refs/tags/$TAG" \
+            --field "sha=$SHA" >/dev/null
+
+      # Pinned to the immutable commit behind anchore/sbom-action v0.24.2.
+      - name: Generate SPDX SBOM
+        uses: anchore/sbom-action@3ad7283483fc7af8ff2b4ea19663c2d5ca935e26 # v0.24.2
+        with:
+          file: dist/yamaha_ynca.zip
+          format: spdx-json
+          output-file: dist/yamaha_ynca.spdx.json
+          upload-artifact: false
+          upload-release-assets: false
+          dependency-snapshot: false
+
+      - name: Generate release checksums
+        working-directory: dist
+        run: sha256sum yamaha_ynca.zip yamaha_ynca.spdx.json > SHA256SUMS
+
+      # Pinned to the immutable commit behind actions/attest v4.
+      - name: Attest build provenance
+        uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6 # v4
+        with:
+          subject-path: dist/yamaha_ynca.zip
+
+      - name: Attest the release SBOM
+        uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6 # v4
+        with:
+          subject-path: dist/yamaha_ynca.zip
+          sbom-path: dist/yamaha_ynca.spdx.json
+
+      # Immutable releases lock their tag and assets at publication, so the
+      # sequence is: draft, attach everything, publish.
+      - name: Create draft release and attach assets
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ steps.version.outputs.tag }}
+          SHA: ${{ steps.bump.outputs.sha }}
+        run: |
+          set -euo pipefail
+          gh release create "$TAG" \
+            --repo "$GITHUB_REPOSITORY" \
+            --target "$SHA" \
+            --title "$TAG" \
+            --generate-notes \
+            --verify-tag \
+            --draft
+
+          gh release upload "$TAG" \
+            dist/yamaha_ynca.zip \
+            dist/yamaha_ynca.spdx.json \
+            dist/SHA256SUMS \
+            --repo "$GITHUB_REPOSITORY" \
+            --clobber
+
+      - name: Publish the release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ steps.version.outputs.tag }}
+        run: gh release edit "$TAG" --repo "$GITHUB_REPOSITORY" --draft=false
+
+      - name: Publish verification instructions
+        env:
+          TAG: ${{ steps.version.outputs.tag }}
+        run: |
+          {
+            echo '### Release verification'
+            echo
+            echo "Published \`$TAG\`."
+            echo
+            echo '```bash'
+            echo "gh release download $TAG -R $GITHUB_REPOSITORY -p yamaha_ynca.zip -p SHA256SUMS"
+            echo 'sha256sum --check SHA256SUMS --ignore-missing'
+            echo "gh attestation verify yamaha_ynca.zip -R $GITHUB_REPOSITORY"
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
