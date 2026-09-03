@@ -55,10 +55,6 @@ dev = [
   # Don't pin versions below, they will follow HA's versions
   "homeassistant-stubs",
   "pytest-homeassistant-custom-component",
-
-  # Pin pycares to avoid aiodns incompatibility with pycares 5.0.0
-  # See: https://github.com/aio-libs/aiodns/issues/214
-  "pycares<5.0.0",
 ]
 
 [tool.coverage.report]

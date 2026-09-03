@@ -83,8 +83,6 @@ async def test_async_setup_entry(
 
     yamahayncaswitch_mock.assert_has_calls(
         [
-            # TODO: improve checks to see if expected entity descriptions are used
-            #       but just want to check for key, not the whole (internal) configuration
             call("entry_id", mock_ynca.main, ANY),
             call("entry_id", mock_ynca.main, ANY),
             call("entry_id", mock_ynca.main, ANY),

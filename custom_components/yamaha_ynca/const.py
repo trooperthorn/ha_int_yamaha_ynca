@@ -2,8 +2,6 @@
 
 import logging
 
-import ynca
-
 DOMAIN = "yamaha_ynca"
 LOGGER = logging.getLogger(__package__)
 

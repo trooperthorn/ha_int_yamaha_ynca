@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from custom_components.yamaha_ynca.helpers import scale, extract_protocol_version
+from custom_components.yamaha_ynca.helpers import extract_protocol_version, scale
 
 
 def test_scale() -> None:
