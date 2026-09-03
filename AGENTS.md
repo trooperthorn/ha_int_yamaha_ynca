@@ -218,17 +218,22 @@ All Markdown files in this repository must be free of [markdownlint](https://git
 
 ## CI / CD
 
-Three GitHub Actions workflows:
+Four GitHub Actions workflows:
 
 | Workflow | Trigger | What it does |
 |---|---|---|
 | `validations.yaml` ("Release gates") | Push to main, PR, nightly, `workflow_call` | pytest, ruff, mypy, hassfest, HACS validation |
 | `security.yaml` | Push, PR, weekly | CodeQL (Python), bandit |
-| `release.yaml` | Push to main, `workflow_dispatch` | Runs `validations.yaml`, then computes the next `v<YYYY.MM.DD>.<build>` version, bumps `manifest.json`, tags, builds the HACS archive, and publishes a GitHub Release with an SPDX SBOM, SHA256SUMS, and build/SBOM attestations |
+| `release.yaml` | Push to main, `workflow_dispatch` | Runs `validations.yaml`, then reads the version already in `manifest.json` (via `.release.json`), tags it, builds the HACS archive, and publishes a GitHub Release with an SPDX SBOM, SHA256SUMS, and build/SBOM attestations. A no-op if that version is already published. |
+| `prepare-release.yml` | `workflow_run` after `release.yaml` completes | If `main` has release-bearing changes since the last published tag, computes the next `v<YYYY.MM.DD>.<build>` version with a GitHub App token, pushes it on `automation/calver-release`, opens a PR, and auto-merges it once checks pass. That merge is what `release.yaml` then tags and publishes. |
 
-Releases are automatic on every merge to `main`; nobody creates tags or
-bumps `manifest.json`'s version by hand. A change is considered CI-safe if
-`./coverage.sh` passes cleanly.
+`main` is branch-protected, so nobody bumps `manifest.json`'s version or
+pushes a tag directly: `prepare-release.yml` routes the version bump through
+a normal PR merge, which is what protected-branch checks actually gate.
+Requires the `RELEASE_AUTOMATION_CLIENT_ID` repo variable and
+`RELEASE_AUTOMATION_PRIVATE_KEY` secret for a GitHub App with Contents and
+Pull requests read/write, installed on this repository. A change is
+considered CI-safe if `./coverage.sh` passes cleanly.
 
 ---
 

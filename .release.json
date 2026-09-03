@@ -1,0 +1,9 @@
+{
+  "tag_prefix": "v",
+  "timezone": "America/Chicago",
+  "archive": {"source": "custom_components/yamaha_ynca", "name": "yamaha_ynca.zip"},
+  "release_paths": ["custom_components/yamaha_ynca"],
+  "version_fields": [
+    {"path": "custom_components/yamaha_ynca/manifest.json", "kind": "json", "key": "version"}
+  ]
+}
