@@ -62,9 +62,6 @@ Cleaning up the auto-generated release notes on [the releases page](https://gith
 afterward, and adding a breaking-changes section when one applies, is still
 a manual step.
 
-`release.py` predates this automation and is no longer part of the release
-path; it's kept only until it's confirmed safe to remove.
-
 ## Update ynca package
 
 To update to a new version of the ynca package simply run the `bump_ynca_version.sh` script and it will update the required references.
