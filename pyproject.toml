@@ -50,7 +50,7 @@ dev = [
   "pytest>=7.0.0",
   "pytest-cov",
   "pytest-mock",
-  "homeassistant==2026.8.0",
+  "homeassistant==2026.9.0",
   # Don't pin versions below, they will follow HA's versions
   "homeassistant-stubs",
   "pytest-homeassistant-custom-component",

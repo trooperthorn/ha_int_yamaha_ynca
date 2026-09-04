@@ -31,3 +31,11 @@ test_switch.py). None are currently known to be flaky, but any of them could
 have the same latent bug if a second entity type ever registers on the same
 mocked subunit. Worth an audit and the same entity_id-filtering fix applied
 proactively rather than waiting for each to flake.
+
+## 2026-09-04: Merge the three upstream `dev` commits
+
+`upstream/dev` is three commits ahead of `main` (the last is "Bump ynca version
+to 6.2.1 (#556)", already matched here by PR 5). Merge `upstream/dev` deliberately
+rather than syncing, because this fork carries the release baseline that upstream
+does not have.
+

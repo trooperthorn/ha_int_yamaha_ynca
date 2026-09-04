@@ -44,13 +44,12 @@ async def test_async_setup_entry(  # noqa: PLR0913
     assert len(mock_ynca.initialize.mock_calls) == 1
     assert mock_ynca is integration.entry.runtime_data.api
 
-    assert len(device_reg.devices.keys()) == 5
+    assert len(device_reg.devices) == 5
 
     for zone_id in ["MAIN", "ZONE2", "ZONE3", "ZONE4"]:
-        device = device_reg.async_get_device(
-            identifiers={
-                (yamaha_ynca.DOMAIN, f"{integration.entry.entry_id}_{zone_id}")
-            }
+        device = device_reg.async_get_device_by_identifier(
+            (yamaha_ynca.DOMAIN, f"{integration.entry.entry_id}_{zone_id}"),
+            integration.entry.entry_id,
         )
         assert device is not None
         assert device.manufacturer == "Yamaha"
@@ -59,8 +58,9 @@ async def test_async_setup_entry(  # noqa: PLR0913
         assert device.name == f"ModelName {zone_id}"
         assert device.configuration_url is None
 
-    device = device_reg.async_get_device(
-        identifiers={(yamaha_ynca.DOMAIN, f"{integration.entry.entry_id}_ZONEB")}
+    device = device_reg.async_get_device_by_identifier(
+        (yamaha_ynca.DOMAIN, f"{integration.entry.entry_id}_ZONEB"),
+        integration.entry.entry_id,
     )
 
     assert device is not None
@@ -84,8 +84,9 @@ async def test_async_setup_entry_socket_has_configuration_url(
         hass, mock_ynca, serial_url="socket://1.2.3.4:4321"
     )
 
-    device = device_reg.async_get_device(
-        identifiers={(yamaha_ynca.DOMAIN, f"{integration.entry.entry_id}_MAIN")}
+    device = device_reg.async_get_device_by_identifier(
+        (yamaha_ynca.DOMAIN, f"{integration.entry.entry_id}_MAIN"),
+        integration.entry.entry_id,
     )
     assert device is not None
     assert device.configuration_url == "http://1.2.3.4"
@@ -120,8 +121,8 @@ async def test_async_setup_entry_preset_removed(
 ) -> None:
     """Test a successful setup entry."""
     mock_ynca.main = mock_zone_main
-    mock_ynca.netradio = create_autospec(ynca.subunits.netradio.NetRadio)
-    mock_ynca.netradio.id = ynca.constants.Subunit.NETRADIO
+    mock_ynca.netradio = create_autospec(ynca.NetRadio)
+    mock_ynca.netradio.id = ynca.NetRadio.id
 
     connection_mock = YncaConnectionMock()
     connection_mock.setup_responses(
@@ -153,8 +154,8 @@ async def test_async_setup_entry_preset_not_removed(
 ) -> None:
     """Test a successful setup entry."""
     mock_ynca.main = mock_zone_main
-    mock_ynca.netradio = create_autospec(ynca.subunits.netradio.NetRadio)
-    mock_ynca.netradio.id = ynca.constants.Subunit.NETRADIO
+    mock_ynca.netradio = create_autospec(ynca.NetRadio)
+    mock_ynca.netradio.id = ynca.NetRadio.id
     mock_ynca.get_attr = Mock(
         side_effect=lambda name, default=None: (
             mock_ynca.netradio if name == "netradio" else default
