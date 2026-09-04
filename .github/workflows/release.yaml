@@ -1,8 +1,4 @@
-# Reconciles the version on main into a verifiable GitHub Release; a normal
-# merge is the trigger and reruns are safe. main is protected, so nobody
-# pushes the version bump directly: prepare-release.yml opens and auto-merges
-# a PR that bumps manifest.json first, and only that merge lands the version
-# this workflow then tags and publishes.
+# A merge to main is the release trigger; see docs/DEVELOPING.md.
 name: Release
 
 on:

@@ -23,3 +23,14 @@ subdirectory to custom_components/" (hacs-documentation
 the archive `scripts/build_release_artifacts.py` zips (only
 `custom_components/yamaha_ynca/` is), so it never reaches a HACS install.
 Kept, with this note, rather than removed a second time.
+
+## 2026-09-04: Leave upstream code comments in place
+
+The comment-to-docs pass that the other trooperthorn repositories went through
+was not applied to files this fork inherits from `mvdwetering/yamaha_ynca`
+(`migrations.py` and the platform modules carry the only candidates, five
+history-style notes in the migration steps). Rewriting upstream comments
+would turn every future upstream merge into a conflict for no runtime gain.
+The pass applies only to files this fork owns: the workflows, the release
+scripts, and `docs/`.
+
